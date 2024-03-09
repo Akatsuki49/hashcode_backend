@@ -1,17 +1,52 @@
-import textract
+import PyPDF2
+import easyocr
 import os
 import re
 
 
-def extract_text(filepath):
-    # read the content of pdf as text
-    text = textract.process(filepath)
-    # use four space as paragraph delimiter to convert the text into list of paragraphs.
-    print(re.split('\s{4,}', text.decode('utf-8')))
-    print("----------------------------------------------------\n")
+# def extract_text(filepath):
+#     pdf_reader = PyPDF2.PdfReader(filepath)
+#     paragraphs = []
+
+#     # Use len(reader.pages) for number of pages
+#     for page_num in range(len(pdf_reader.pages)):
+#         page = pdf_reader.pages[page_num]
+#         text = page.extract_text()
+
+#         # Split the text into paragraphs.
+#         paragraphs.extend(text.split("\n\n"))
+
+#     return paragraphs
 
 
-fname = r'C:\Users\sowme\StudioProjects\hashcode_backend\assets'
-output_file = os.path.join(fname, "Beauty_and_Beast.pdf")
+def extract_text_from_pdf_with_easyocr(pdf_path):
+    reader = PyPDF2.PdfReader(pdf_path)
+    num_pages = len(reader.pages)
 
-extract_text(output_file)
+    text = ''
+    for page_num in range(num_pages):
+        page_text = reader.pages[page_num].extract_text()
+        text += page_text
+
+    return text
+
+def extract_text_with_ocr(text):
+    reader = easyocr.Reader(['en'])
+    result = reader.readtext(text)
+    extracted_text = ' '.join([entry[1] for entry in result])
+    return extracted_text
+
+def find_parent_folder(filename, search_directory='.'):
+    for root, dirs, files in os.walk(search_directory):
+        if filename in files:
+            return os.path.abspath(root)
+
+    return None  # File not found in the specified directory and its subdirectories
+
+fname = "Beauty_and_Beast.pdf"
+pfolder = find_parent_folder(fname)
+ofolder = os.path.join(pfolder,fname)
+pdf_text = extract_text_from_pdf_with_easyocr(ofolder)
+extracted_text = extract_text_with_ocr(pdf_text)
+print(extracted_text)
+# print(x1)
