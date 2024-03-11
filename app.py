@@ -1,14 +1,19 @@
-import textract
 import re
-from flask import Flask, request, jsonify
-from models.image_generator import generate_image
-from models.audio_generator import generate_audio
-from models.language_model import extract_context
+import base64
+from diffusers import StableDiffusionPipeline
+import torch
+import numpy as np
+import soundfile as sf
+from models.testing import imggen
+from pydub import AudioSegment
+from flask import Flask, request, jsonify, send_file
 import json
 from openai import OpenAI
+from models.audioext import audgen
 
 # Load API key from config file
-API_KEY = "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"
+# API_KEY = "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"
+API_KEY = "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"
 
 
 app = Flask(__name__)
@@ -19,8 +24,10 @@ def visualize_paragraph():
     paragraph_text = request.form['paragraph']
     title = request.form['title']
     image_context = generate_SummarizedPrompt_image(paragraph_text, title)
+    print(image_context)
 
-    image_data = generate_image(image_context)
+    image_data = imggen(image_context)
+
 
     return jsonify({'image': image_data})
 
@@ -30,17 +37,17 @@ def generate_audio_endpoint():
     paragraph_text = request.form['paragraph']
     audio_context = generate_SummarizedPrompt_audio(paragraph_text)
 
-    audio_data = generate_audio(image_context)
+    audgen(audio_context)
 
-    return jsonify({'audio': audio_data})
+    return send_file('musicgen_out.wav', as_attachment=True)
+    # return send_file(audio_data, mimetype='audio/wav')
 
 
 def generate_SummarizedPrompt_image(paragraph_text, title):
-    extra_text = "This is a paragraph from the story book {title}, deduce the context of the given paragraph while keeping in mind thigs like title, genre and give me an optimized prompt to query a model to generate an image for the paragraph given the surrounding context. Keep it limited to 70 words and Give me only the prompt"
-
+    extra_text = "This is a paragraph from the story book "+ title +" , deduce the context of the given paragraph while keeping in mind thigs like title, genre, keywords and also what happened previously in this book before this point of time. Give me an optimized prompt to query a model to generate an image for the paragraph given the surrounding context and keep it very creative. Keep it limited to 70 words and Give me only the prompt. "
     final_text = paragraph_text+extra_text
     # query open AI gpt4:
-    query_llm(final_text)
+    return query_llm(final_text,title)
     pass
 
 
@@ -49,31 +56,34 @@ def generate_SummarizedPrompt_audio(paragraph_text):
 
     final_text = paragraph_text+extra_text
     # query gpt4
-    query_llm(final_text)
-    pass
+    return query_llm(final_text,"")
 
 
-def query_llm(text):
-    client = OpenAI(
-        # This is the default and can be omitted
-        api_key=API_KEY
-    )
+def query_llm(text, extra):
+    final=""
+    if(len(extra)>0):
+        final=text+" Book Title : "+extra
+    else:
+        final=text
+    client = OpenAI(api_key=API_KEY)
     response = client.chat.completions.create(
         messages=[
             {
                 "role": "user",
-                "content": text,
+                "content": final,
             }
         ],
+        max_tokens = 75,
         model="gpt-3.5-turbo",
+        temperature = 0.4,
     )
 
     if response and response.choices:
         summarized_content = response.choices[0].message.content
-        print(summarized_content)
+        # print(summarized_content)
         return summarized_content
     else:
-        print("Error: No response from the model")
+        # print("Error: No response from the model")
         return "Error: No response from the model"
 
 
