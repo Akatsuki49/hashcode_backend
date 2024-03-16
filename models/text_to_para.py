@@ -5,7 +5,7 @@ from firebase_admin import firestore
 
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate(
-    '/secrets/hashcode2024-7b5b5-firebase-adminsdk-92lko-306938f8dd.json')
+    'Add certificate here')
 firebase_admin.initialize_app(cred)
 
 # Get Firestore instance
