@@ -12,8 +12,8 @@ from openai import OpenAI
 from models.audioext import audgen
 
 # Load API key from config file
-# API_KEY = "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"
-API_KEY = "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"
+
+API_KEY = "Add secret key"
 
 
 app = Flask(__name__)
